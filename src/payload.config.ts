@@ -76,9 +76,10 @@ export default buildConfig({
       enabled: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
       collections: { media: true },
       token: process.env.BLOB_READ_WRITE_TOKEN || '',
-      // Upload directly from the browser to Blob, bypassing Vercel's 4.5MB
-      // serverless request-body limit (otherwise larger images fail to save).
-      clientUploads: true,
+      // Server-side uploads (browser -> /api/media -> Blob). Reliable with the
+      // OIDC-based Vercel Blob integration. Note: Vercel's serverless body limit
+      // is 4.5MB, so keep individual uploads under that. For larger files,
+      // re-enable `clientUploads: true` (direct browser->Blob).
     }),
   ],
   // sharp powers image resizing for the upload sizes defined on Media.
