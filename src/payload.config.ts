@@ -76,6 +76,9 @@ export default buildConfig({
       enabled: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
       collections: { media: true },
       token: process.env.BLOB_READ_WRITE_TOKEN || '',
+      // Upload directly from the browser to Blob, bypassing Vercel's 4.5MB
+      // serverless request-body limit (otherwise larger images fail to save).
+      clientUploads: true,
     }),
   ],
   // sharp powers image resizing for the upload sizes defined on Media.
