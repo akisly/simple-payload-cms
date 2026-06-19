@@ -1,7 +1,5 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
-  "buildCommand": "pnpm run build",
-  "installCommand": "pnpm install --no-frozen-lockfile",
   "framework": "nextjs",
   "functions": {
     "src/app/(payload)/api/[...slug]/route.ts": {

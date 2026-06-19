@@ -30,7 +30,18 @@ export default buildConfig({
   },
   db: postgresAdapter({
     pool: {
-      connectionString: process.env.DATABASE_URI || '',
+      // Prefer DATABASE_URI; fall back to the vars Vercel's Neon/Postgres
+      // integration injects automatically. Use the POOLED string on serverless.
+      connectionString:
+        process.env.DATABASE_URI ||
+        process.env.POSTGRES_URL ||
+        process.env.DATABASE_URL ||
+        '',
+      // Supabase's pooler presents a cert that isn't in Node's default CA store,
+      // which throws "self-signed certificate in certificate chain". Encrypt the
+      // connection but don't reject the chain. For strict verification instead,
+      // download Supabase's CA cert and pass it as { ca: fs.readFileSync(...) }.
+      ssl: { rejectUnauthorized: false },
     },
     // Auto-creates/updates tables in dev. In production/CI use generated
     // migrations instead (payload migrate) for safe, reviewable schema changes.
