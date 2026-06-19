@@ -1,5 +1,6 @@
 import { postgresAdapter } from '@payloadcms/db-postgres'
 import { lexicalEditor } from '@payloadcms/richtext-lexical'
+import { vercelBlobStorage } from '@payloadcms/storage-vercel-blob'
 import path from 'path'
 import { buildConfig } from 'payload'
 import { fileURLToPath } from 'url'
@@ -66,6 +67,17 @@ export default buildConfig({
     // migrations instead (payload migrate) for safe, reviewable schema changes.
     push: process.env.NODE_ENV !== 'production',
   }),
+  plugins: [
+    // On Vercel the runtime filesystem is read-only, so uploaded files must go
+    // to external storage. When BLOB_READ_WRITE_TOKEN is set (i.e. on Vercel),
+    // media is stored in Vercel Blob; locally, without the token, it falls back
+    // to disk (staticDir: 'media').
+    vercelBlobStorage({
+      enabled: Boolean(process.env.BLOB_READ_WRITE_TOKEN),
+      collections: { media: true },
+      token: process.env.BLOB_READ_WRITE_TOKEN || '',
+    }),
+  ],
   // sharp powers image resizing for the upload sizes defined on Media.
   sharp,
   graphQL: {
