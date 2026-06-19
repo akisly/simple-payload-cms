@@ -14,6 +14,32 @@ import { Decor } from './collections/Decor'
 const filename = fileURLToPath(import.meta.url)
 const dirname = path.dirname(filename)
 
+/**
+ * Build the Postgres connection string. We strip SSL/pooler query params
+ * (sslmode, uselibpqcompat, supa, pgbouncer) from whatever the host injected
+ * — on Vercel, Supabase's POSTGRES_URL ships `?sslmode=require`, which under
+ * pg v3 semantics forces full cert verification and rejects Supabase's
+ * self-signed chain, overriding the `ssl` option below. We instead control SSL
+ * entirely in code (ssl.rejectUnauthorized: false).
+ */
+const buildConnectionString = (): string => {
+  const raw =
+    process.env.DATABASE_URI ||
+    process.env.POSTGRES_URL ||
+    process.env.DATABASE_URL ||
+    ''
+  if (!raw) return ''
+  try {
+    const url = new URL(raw)
+    for (const p of ['sslmode', 'uselibpqcompat', 'supa', 'pgbouncer']) {
+      url.searchParams.delete(p)
+    }
+    return url.toString()
+  } catch {
+    return raw
+  }
+}
+
 export default buildConfig({
   admin: {
     user: Users.slug,
@@ -30,17 +56,10 @@ export default buildConfig({
   },
   db: postgresAdapter({
     pool: {
-      // Prefer DATABASE_URI; fall back to the vars Vercel's Neon/Postgres
-      // integration injects automatically. Use the POOLED string on serverless.
-      connectionString:
-        process.env.DATABASE_URI ||
-        process.env.POSTGRES_URL ||
-        process.env.DATABASE_URL ||
-        '',
-      // Supabase's pooler presents a cert that isn't in Node's default CA store,
-      // which throws "self-signed certificate in certificate chain". Encrypt the
-      // connection but don't reject the chain. For strict verification instead,
-      // download Supabase's CA cert and pass it as { ca: fs.readFileSync(...) }.
+      connectionString: buildConnectionString(),
+      // Encrypt the connection but don't reject Supabase's self-signed chain.
+      // For strict verification, download Supabase's CA cert and pass it as
+      // { ca: fs.readFileSync(...) } instead.
       ssl: { rejectUnauthorized: false },
     },
     // Auto-creates/updates tables in dev. In production/CI use generated
